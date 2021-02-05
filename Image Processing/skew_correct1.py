@@ -2,15 +2,9 @@
 import cv2
 import numpy as np
 import math
-import pyttsx3
 import pytesseract
 import re
-import time
-from typing import Tuple, Union
-from pytesseract import Output
 from blend_modes import divide
-from spellchecker import SpellChecker
-from PIL import Image
 import matplotlib.pyplot as plt
 
 
