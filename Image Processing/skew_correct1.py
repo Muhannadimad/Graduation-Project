@@ -53,7 +53,7 @@ def corrected_angle(angle):
     print(angle)
     if 0 <= angle <= 45:
         corrected_angle = angle
-    elif 45 <= angle <= 90:
+    if 45 <= angle <= 90:
         corrected_angle = angle - 90
     elif -45 <= angle < 0:
         corrected_angle = angle - 90
@@ -146,8 +146,9 @@ def correct_skew(image):
 
         # using regex we search for the angle(in string format) of the text
         angle_rotated_image = re.search('(?<=Rotate: )\d+', osd_rotated_image).group(0)
-
+        print("as" + angle_rotated_image)
         if (angle_rotated_image == '0'):
+            print("mahdi")
             # no further rotation
             rotated_image = rotated_image
             # break the loop once we get the correctly deskewed image
@@ -202,25 +203,78 @@ def de_shadow(image):
     # returning the shadow-free image
     return blend
 
+def remove_shadows(image: np.ndarray):
+    # split the image channels into b,g,r
+    b = image[:, :, 0]
+    g = image[:, :, 1]
+    r = image[:, :, 2]
+    rgb_planes = [b, g, r]
 
+    # iniatialising the final shadow free normalised image list for planes
+    result_norm_planes = []
 
+    # removing the shadows in individual planes
+    for plane in rgb_planes:
+        # dialting the image to spead the text to the background
+        dilated_image = cv2.dilate(plane, np.ones((7, 7), np.uint8))
+
+        # blurring the image to get the backround image
+        bg_image = cv2.medianBlur(dilated_image, 21)
+
+        # subtracting the plane-background from the image-plane
+        diff_image = 255 - cv2.absdiff(plane, bg_image)
+
+        # normalisng the plane
+        norm_image = cv2.normalize(diff_image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
+
+        # appending the plane to the final planes list
+        result_norm_planes.append(norm_image)
+
+    # merging the shadow-free planes into one image
+    normalised_image = cv2.merge(result_norm_planes)
+
+    # returning the normalised image
+    return normalised_image
+
+# Binarize the cropped image
+# def binarize (image):
+#     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+#     T = threshold_local(gray_image, 11, offset=10, method="gaussian")
+#     binarized_image = (gray_image > T).astype("uint8") * 255
 
 
 # im = Image.open("images/ta2.jpg")
 # im.save("ta2.jpg", dpi=(300,300))
 
-img = cv2.imread("images/img3.jpg")
+img = cv2.imread("images/d1.JPG")
 
-de = correct_skew(img)
+# removing shadows from the image
+no_shadows = de_shadow(img)
+
+cv2.imshow("no_shadows", no_shadows)
+cv2.waitKey(0)
+
+re_shadows = remove_shadows(no_shadows)
+
+cv2.imshow("re_shadows", re_shadows)
+cv2.waitKey(0)
+
+de = correct_skew(no_shadows)
+
+cv2.imshow("de", de)
+cv2.waitKey(0)
 
 # converting to grayscale
 gray = cv2.cvtColor(de, cv2.COLOR_BGR2GRAY)
 
+cv2.imshow("gray", gray)
+cv2.waitKey(0)
+
 # getting the binarized image
 otsu = get_otsu(gray)
 
-
-cv2.imshow("img", otsu)
+cv2.imwrite("images/im.jpg" , otsu )
+cv2.imshow("otsu", otsu)
 cv2.waitKey(0)
 
 imgplot = plt.imshow(otsu)
